@@ -11,6 +11,7 @@ commands:
             pip install pyflakes==2.1.1 pylint setuptools-lint
             pip install --upgrade setuptools wheel twine
             pyflakes src/opentelemetry/ext/honeycomb && python setup.py lint --lint-rcfile pylint.rc && python setup.py test
+
   publish:
     steps:
       - checkout
@@ -29,7 +30,7 @@ commands:
             # create a wheel
             python setup.py bdist_wheel
             twine upload dist/*
-            ./push_docs.sh
+
 executors:
   python3-5:
     docker:
