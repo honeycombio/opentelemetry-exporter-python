@@ -22,6 +22,7 @@ import datetime
 import os
 import socket
 
+from opentelemetry.ext import http_requests
 import opentelemetry.trace as trace_api
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.trace.status import StatusCanonicalCode
@@ -44,6 +45,7 @@ class HoneycombSpanExporter(SpanExporter):
         if not service_name:
             service_name = os.environ.get('HONEYCOMB_SERVICE', dataset)
 
+        http_requests.disable()  # duplicate instrumentation avoidance.
         self.client = libhoney.Client(
             writekey=writekey,
             dataset=dataset,
@@ -74,19 +76,19 @@ def _translate_to_hny(spans):
         span_id = ctx.span_id
         duration_ns = span.end_time - span.start_time
         d = {
-            'trace.trace_id': trace_api.format_trace_id(trace_id),
-            'trace.span_id': trace_api.format_span_id(span_id),
+            'trace.trace_id': trace_api.format_trace_id(trace_id)[2:],
+            'trace.span_id': trace_api.format_span_id(span_id)[2:],
             'name': span.name,
             'start_time': datetime.datetime.utcfromtimestamp(span.start_time / float(1e9)),
-            'duration_ms': duration_ns / 1000.0,  # nanoseconds to ms
+            'duration_ms': duration_ns / float(1e6),  # nanoseconds to ms
             'response.status_code': span.status.canonical_code.value,
             'status.message': span.status.description,
             'span.kind': span.kind.name,  # meta.span_type?
         }
         if isinstance(span.parent, trace_api.Span):
-            d['trace.parent_id'] = trace_api.format_span_id(span.parent.get_context().span_id)
+            d['trace.parent_id'] = trace_api.format_span_id(span.parent.get_context().span_id)[2:]
         elif isinstance(span.parent, trace_api.SpanContext):
-            d['trace.parent_id'] = trace_api.format_span_id(span.parent.span_id)
+            d['trace.parent_id'] = trace_api.format_span_id(span.parent.span_id)[2:]
         # TODO: use sampling_decision attributes for sample rate.
         d.update(span.attributes)
 
@@ -108,10 +110,10 @@ def _extract_refs_from_span(span):
         l_trace_id = link.context.trace_id
         l_span_id = link.context.span_id
         ref = {
-            'trace.trace_id': trace_api.format_trace_id(trace_id),
-            'trace.parent_id': trace_api.format_span_id(p_span_id),
-            'trace.link.trace_id': trace_api.format_trace_id(l_trace_id),
-            'trace.link.span_id': trace_api.format_span_id(l_span_id),
+            'trace.trace_id': trace_api.format_trace_id(trace_id)[2:],
+            'trace.parent_id': trace_api.format_span_id(p_span_id)[2:],
+            'trace.link.trace_id': trace_api.format_trace_id(l_trace_id)[2:],
+            'trace.link.span_id': trace_api.format_span_id(l_span_id)[2:],
             'meta.span_type': 'link',
             'ref_type': 0,
         }
@@ -130,8 +132,8 @@ def _extract_logs_from_span(span):
             'start_time': datetime.datetime.utcfromtimestamp(event.timestamp / float(1e9)),
             'duration_ms': 0,
             'name': event.name,
-            'trace.trace_id': trace_api.format_trace_id(trace_id),
-            'trace.parent_id': trace_api.format_span_id(p_span_id),
+            'trace.trace_id': trace_api.format_trace_id(trace_id)[2:],
+            'trace.parent_id': trace_api.format_span_id(p_span_id)[2:],
             'meta.span_type': 'span_event',
         }
         l.update(event.attributes)
