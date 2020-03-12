@@ -47,7 +47,7 @@ class HoneycombSpanExporter(SpanExporter):
         self.client = libhoney.Client(
             writekey=writekey,
             dataset=dataset,
-            api_host=dataset,
+            api_host=api_host,
             user_agent_addition=USER_AGENT_ADDITION,
         )
         self.client.add_field('service_name', service_name)
