@@ -72,14 +72,9 @@ def _translate_to_hny(spans):
         ctx = span.get_context()
         trace_id = ctx.trace_id
         span_id = ctx.span_id
-        if isinstance(span.parent, trace_api.Span):
-            parent_id = span.parent.get_context().span_id
-        elif isinstance(span.parent, trace_api.SpanContext):
-            parent_id = span.parent.span_id
         duration_ns = span.end_time - span.start_time
         d = {
             'trace.trace_id': trace_api.format_trace_id(trace_id),
-            'trace.parent_id': trace_api.format_span_id(parent_id),
             'trace.span_id': trace_api.format_span_id(span_id),
             'name': span.name,
             'start_time': datetime.datetime.utcfromtimestamp(span.start_time / float(1e9)),
@@ -88,6 +83,10 @@ def _translate_to_hny(spans):
             'status.message': span.status.description,
             'span.kind': span.kind.name,  # meta.span_type?
         }
+        if isinstance(span.parent, trace_api.Span):
+            d['trace.parent_id'] = trace_api.format_span_id(span.parent.get_context().span_id)
+        elif isinstance(span.parent, trace_api.SpanContext):
+            d['trace.parent_id'] = trace_api.format_span_id(span.parent.span_id)
         # TODO: use sampling_decision attributes for sample rate.
         d.update(span.attributes)
 
@@ -132,7 +131,7 @@ def _extract_logs_from_span(span):
             'duration_ms': 0,
             'name': event.name,
             'trace.trace_id': trace_api.format_trace_id(trace_id),
-            'trace.parent_id': trace_api.format_trace_id(p_span_id),
+            'trace.parent_id': trace_api.format_span_id(p_span_id),
             'meta.span_type': 'span_event',
         }
         l.update(event.attributes)
