@@ -18,6 +18,7 @@ Honeycomb from within your Python application.
 '''
 
 import libhoney
+import datetime
 import os
 import socket
 
@@ -75,14 +76,14 @@ def _translate_to_hny(spans):
             parent_id = span.parent.get_context().span_id
         elif isinstance(span.parent, trace_api.SpanContext):
             parent_id = span.parent.span_id
-        duration = span.end_time - span.start_time
+        duration_ns = span.end_time - span.start_time
         d = {
-            'trace.trace_id': trace_id,
-            'trace.parent_id': parent_id,
-            'trace.span_id': span_id,
+            'trace.trace_id': trace_api.format_trace_id(trace_id),
+            'trace.parent_id': trace_api.format_span_id(parent_id),
+            'trace.span_id': trace_api.format_span_id(span_id),
             'name': span.name,
-            'start_time': span.start_time,
-            'duration_ms': duration.total_seconds() * 1000.0,
+            'start_time': datetime.datetime.utcfromtimestamp(span.start_time / float(1e9)),
+            'duration_ms': duration_ns / 1000.0,  # nanoseconds to ms
             'response.status_code': span.status.canonical_code.value,
             'status.message': span.status.description,
             'span.kind': span.kind.name,  # meta.span_type?
@@ -108,10 +109,10 @@ def _extract_refs_from_span(span):
         l_trace_id = link.context.trace_id
         l_span_id = link.context.span_id
         ref = {
-            'trace.trace_id': trace_id,
-            'trace.parent_id': p_span_id,
-            'trace.link.trace_id': l_trace_id,
-            'trace.link.span_id': l_span_id,
+            'trace.trace_id': trace_api.format_trace_id(trace_id),
+            'trace.parent_id': trace_api.format_span_id(p_span_id),
+            'trace.link.trace_id': trace_api.format_trace_id(l_trace_id),
+            'trace.link.span_id': trace_api.format_span_id(l_span_id),
             'meta.span_type': 'link',
             'ref_type': 0,
         }
@@ -127,11 +128,11 @@ def _extract_logs_from_span(span):
     p_span_id = ctx.span_id
     for event in span.events:
         l = {
-            'start_time': event.timestamp,
+            'start_time': datetime.datetime.utcfromtimestamp(event.timestamp / float(1e9)),
             'duration_ms': 0,
             'name': event.name,
-            'trace.trace_id': trace_id,
-            'trace.parent_id': p_span_id,
+            'trace.trace_id': trace_api.format_trace_id(trace_id),
+            'trace.parent_id': trace_api.format_trace_id(p_span_id),
             'meta.span_type': 'span_event',
         }
         l.update(event.attributes)
