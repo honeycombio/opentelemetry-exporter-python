@@ -21,8 +21,10 @@ import libhoney
 import datetime
 import os
 import socket
+import types
 
-from opentelemetry.ext import http_requests
+from requests import Session
+
 import opentelemetry.trace as trace_api
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.trace.status import StatusCanonicalCode
@@ -45,12 +47,20 @@ class HoneycombSpanExporter(SpanExporter):
         if not service_name:
             service_name = os.environ.get('HONEYCOMB_SERVICE', dataset)
 
-        http_requests.disable()  # duplicate instrumentation avoidance.
+        transmission_impl = libhoney.transmission.Transmission(
+            user_agent_addition=USER_AGENT_ADDITION,
+        )
+        request = Session.request
+        if getattr(Session.request, "opentelemetry_ext_requests_applied", False):
+            request = Session.request.__wrapped__  # pylint:disable=no-member
+        # Bind session.request for this object to the non-instrumented version.
+        transmission_impl.session.request = types.MethodType(request, transmission_impl.session)
+
         self.client = libhoney.Client(
             writekey=writekey,
             dataset=dataset,
             api_host=api_host,
-            user_agent_addition=USER_AGENT_ADDITION,
+            transmission_impl=transmission_impl,
         )
         self.client.add_field('service_name', service_name)
         self.client.add_field('meta.otel_exporter_version', VERSION)
