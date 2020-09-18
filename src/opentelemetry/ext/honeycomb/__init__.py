@@ -126,7 +126,7 @@ def _extract_refs_from_span(span):
             'trace.parent_id': trace_api.format_span_id(p_span_id)[2:],
             'trace.link.trace_id': trace_api.format_trace_id(l_trace_id)[2:],
             'trace.link.span_id': trace_api.format_span_id(l_span_id)[2:],
-            'meta.span_type': 'link',
+            'meta.annotation_type': 'link',
             'ref_type': 0,
         }
         ref.update(link.attributes)
@@ -146,7 +146,7 @@ def _extract_logs_from_span(span):
             'name': event.name,
             'trace.trace_id': trace_api.format_trace_id(trace_id)[2:],
             'trace.parent_id': trace_api.format_span_id(p_span_id)[2:],
-            'meta.span_type': 'span_event',
+            'meta.annotation_type': 'span_event',
         }
         l.update(event.attributes)
         logs.append(l)
