@@ -77,8 +77,6 @@ class HoneycombSpanExporter(SpanExporter):
 
     def shutdown(self):
         self.client.flush()
-        self.client.close()
-        self.client = None
 
 def _translate_to_hny(spans):
     hny_data = []
