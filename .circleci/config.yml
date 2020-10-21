@@ -1,35 +1,7 @@
 version: 2.1
 
-commands:
-  runtests:
-    steps:
-      - checkout
-      - run:
-          command: |
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install pyflakes==2.1.1 pylint setuptools-lint
-            pip install --upgrade setuptools wheel twine
-            pyflakes opentelemetry/ext/honeycomb && python setup.py lint --lint-rcfile pylint.rc && python setup.py test
-
-  publish:
-    steps:
-      - checkout
-      - run:
-          name: "publish to pypi"
-          command: |
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install --upgrade setuptools wheel twine
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = honeycomb" >> ~/.pypirc
-            echo -e "password = ${PYPI_PASSWORD}" >> ~/.pypirc
-
-            # create a source distribution
-            python setup.py sdist
-            # create a wheel
-            python setup.py bdist_wheel
-            twine upload dist/*
+orbs:
+  buildevents: honeycombio/buildevents@0.2.6
 
 executors:
   python3-5:
@@ -44,6 +16,74 @@ executors:
   python3-8:
     docker:
       - image: circleci/python:3.8
+  github:
+    docker:
+      - image: cibuilds/github:0.13.0
+
+commands:
+  setup:
+    steps:
+      - checkout
+      - buildevents/berun:
+          bename: poetry_install
+          becommand: poetry install --no-root
+  run_lint:
+    steps:
+      - buildevents/berun:
+          bename: run_lint
+          becommand: poetry run pylint --rcfile=pyline.rc opentelemetry/ext/honeycomb
+      - buildevents/berun:
+          bename: run_pycodestyle
+          becommand: poetry run pycodestyle opentelemetry/ext/honeycomb --max-line-length=140
+  run_tests:
+    steps:
+      - buildevents/berun:
+          bename: run_tests
+          becommand: poetry run coverage run -m opentelemetry.ext.honeycomb.test_suite
+  run_coverage:
+    steps:
+      - buildevents/berun:
+          bename: coverage_report
+          becommand: poetry run coverage report --include="opentelemetry/ext/honeycomb/*"
+      - buildevents/berun:
+          bename: coverage_html
+          becommand: poetry run coverage html --include="beeline/*"
+  build:
+    steps:
+      - setup
+      - run: mkdir -p ~/artifacts
+      - buildevents/berun:
+          bename: poetry_build
+          becommand: poetry build
+      - buildevents/berun:
+          bename: copy_binaries
+          becommand: cp dist/* ~/artifacts
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - artifacts
+      - store_artifacts:
+          path: ~/artifacts
+
+  publish_github:
+    steps:
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: "Artifacts being published"
+          command: |
+            echo "about to publish to tag ${CIRCLE_TAG}"
+            ls -l ~/artifacts/*
+      - buildevents/berun:
+          bename: ghr_draft
+          becommand: ghr -draft -n ${CIRCLE_TAG} -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ~/artifacts
+
+  publish_pypi:
+    steps:
+      - setup
+      - buildevents/berun:
+          bename: poetry_publish
+          becommand: poetry publish --build -u honeycomb -p ${PYPI_PASSWORD}
 
 # required as all of the jobs need to have a tag filter for some reason
 tag_filters: &tag_filters
@@ -81,7 +121,19 @@ workflows:
       - test_python3-6: *tag_filters
       - test_python3-7: *tag_filters
       - test_python3-8: *tag_filters
-      - publish:
+      - publish_pypi:
+          requires:
+            - test_python3-5
+            - test_python3-6
+            - test_python3-7
+            - test_python3-8
+          filters:
+            tags:
+              # version tags are otel version + letter + exporter version, eg 0.4a0
+              only: /v[0-9]+(\.[0-9a-z]+)*/
+            branches:
+              ignore: /.*/
+      - publish_github:
           requires:
             - test_python3-5
             - test_python3-6
