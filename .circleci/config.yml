@@ -1,35 +1,7 @@
 version: 2.1
 
-commands:
-  runtests:
-    steps:
-      - checkout
-      - run:
-          command: |
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install pyflakes==2.1.1 pylint setuptools-lint
-            pip install --upgrade setuptools wheel twine
-            pyflakes src/opentelemetry/ext/honeycomb && python setup.py lint --lint-rcfile pylint.rc && python setup.py test
-
-  publish:
-    steps:
-      - checkout
-      - run:
-          name: "publish to pypi"
-          command: |
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install --upgrade setuptools wheel twine
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = honeycomb" >> ~/.pypirc
-            echo -e "password = ${PYPI_PASSWORD}" >> ~/.pypirc
-
-            # create a source distribution
-            python setup.py sdist
-            # create a wheel
-            python setup.py bdist_wheel
-            twine upload dist/*
+orbs:
+  buildevents: honeycombio/buildevents@0.2.6
 
 executors:
   python3-5:
@@ -44,52 +16,257 @@ executors:
   python3-8:
     docker:
       - image: circleci/python:3.8
+  github:
+    docker:
+      - image: cibuilds/github:0.13.0
+
+commands:
+  setup:
+    steps:
+      - checkout
+      - buildevents/berun:
+          bename: poetry_install
+          becommand: poetry install --no-root
+  run_lint:
+    steps:
+      - buildevents/berun:
+          bename: run_lint
+          becommand: poetry run pylint --rcfile=pylint.rc opentelemetry
+      - buildevents/berun:
+          bename: run_pycodestyle
+          becommand: poetry run pycodestyle opentelemetry --max-line-length=140
+  run_tests:
+    steps:
+      - buildevents/berun:
+          bename: run_tests
+          becommand: poetry run coverage run -m opentelemetry.ext.honeycomb.test_suite
+  run_coverage:
+    steps:
+      - buildevents/berun:
+          bename: coverage_report
+          becommand: poetry run coverage report --include="opentelemetry/*"
+      - buildevents/berun:
+          bename: coverage_html
+          becommand: poetry run coverage html --include="opentelemetry/*"
+
+  runtests:
+    steps:
+      - setup
+      - run_lint
+      - run_tests
+      - run_coverage
+      - store_artifacts:
+          path: htmlcov
+  build:
+    steps:
+      - setup
+      - run: mkdir -p ~/artifacts
+      - buildevents/berun:
+          bename: poetry_build
+          becommand: poetry build
+      - buildevents/berun:
+          bename: copy_binaries
+          becommand: cp dist/* ~/artifacts
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - artifacts
+      - store_artifacts:
+          path: ~/artifacts
+
+  publish_github:
+    steps:
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: "Artifacts being published"
+          command: |
+            echo "about to publish to tag ${CIRCLE_TAG}"
+            ls -l ~/artifacts/*
+      - buildevents/berun:
+          bename: ghr_draft
+          becommand: ghr -draft -n ${CIRCLE_TAG} -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ~/artifacts
+
+  publish_pypi:
+    steps:
+      - setup
+      - buildevents/berun:
+          bename: poetry_publish
+          becommand: poetry publish --build -u honeycomb -p ${PYPI_PASSWORD}
 
 # required as all of the jobs need to have a tag filter for some reason
 tag_filters: &tag_filters
   filters:
-      tags:
-        only: /.*/
+    tags:
+      only: /.*/
 
 jobs:
+  setup_trace:
+    executor: python3-8
+    steps:
+      - buildevents/start_trace
+  watch:
+    executor: python3-8
+    steps:
+      - buildevents/watch_build_and_finish
   test_python3-5:
     executor: python3-5
     steps:
-      - runtests
+      - buildevents/with_job_span:
+          steps:
+            - runtests
   test_python3-6:
     executor: python3-6
     steps:
-      - runtests
+      - buildevents/with_job_span:
+          steps:
+            - runtests
   test_python3-7:
     executor: python3-7
     steps:
-      - runtests
+      - buildevents/with_job_span:
+          steps:
+            - runtests
   test_python3-8:
     executor: python3-8
     steps:
-      - runtests
-  publish:
-    executor: python3-7
+      - buildevents/with_job_span:
+          steps:
+            - runtests
+  build:
+    executor: python3-8
     steps:
-      - publish
+      - buildevents/with_job_span:
+          steps:
+            - build
+  publish_github:
+    executor: github
+    steps:
+      - buildevents/with_job_span:
+          steps:
+            - publish_github
+  publish_pypi:
+    executor: python3-8
+    steps:
+      - buildevents/with_job_span:
+          steps:
+            - publish_pypi
 
 workflows:
   version: 2
-  otel_exporter:
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - main
     jobs:
-      - test_python3-5: *tag_filters
-      - test_python3-6: *tag_filters
-      - test_python3-7: *tag_filters
-      - test_python3-8: *tag_filters
-      - publish:
+      - setup_trace:
+          filters:
+            tags:
+              only: /.*/
+      - watch:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - setup_trace
+      - test_python3-5:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - setup_trace
+      - test_python3-6:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - setup_trace
+      - test_python3-7:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - setup_trace
+      - test_python3-8:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - setup_trace
+      - build:
+          filters:
+            tags:
+              only: /.*/
           requires:
             - test_python3-5
             - test_python3-6
             - test_python3-7
             - test_python3-8
+
+  build_opentelemetry:
+    jobs:
+      - setup_trace:
           filters:
             tags:
-              # version tags are otel version + letter + exporter version, eg 0.4a0
-              only: /v[0-9]+(\.[0-9a-z]+)*/
+              only: /.*/
+      - watch:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - setup_trace
+      - test_python3-5:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - setup_trace
+      - test_python3-6:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - setup_trace
+      - test_python3-7:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - setup_trace
+      - test_python3-8:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - setup_trace
+      - build:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - test_python3-5
+            - test_python3-6
+            - test_python3-7
+            - test_python3-8
+      - publish_github:
+          context: Honeycomb Secrets
+          requires:
+            - build
+          filters:
+            tags:
+              only: /v[0-9].*/
+            branches:
+              ignore: /.*/
+      - publish_pypi:
+          context: Honeycomb Secrets
+          requires:
+            - build
+          filters:
+            tags:
+              only: /v[0-9].*/
             branches:
               ignore: /.*/
