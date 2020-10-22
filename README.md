@@ -19,3 +19,13 @@ exporter = HoneycombSpanExporter(
 span_processor = BatchExportSpanProcessor(exporter)
 tracer.add_span_processor(span_processor)
 ```
+
+### Development
+
+This package uses [poetry](https://python-poetry.org/) for packaging and dependency management. To install a development copy into a virtualenv locally, run:
+
+```
+$ poetry install
+```
+
+And then activate the appropriate virtualenv.

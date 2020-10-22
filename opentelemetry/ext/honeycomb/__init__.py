@@ -29,9 +29,9 @@ import opentelemetry.trace as trace_api
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.trace.status import StatusCanonicalCode
 
-from opentelemetry.ext.honeycomb.version import VERSION
-
+VERSION = '0.6b0'
 USER_AGENT_ADDITION = 'opentelemetry-exporter-python/%s' % VERSION
+
 
 class HoneycombSpanExporter(SpanExporter):
     """Honeycomb span exporter for Opentelemetry.
@@ -80,6 +80,7 @@ class HoneycombSpanExporter(SpanExporter):
         self.client.close()
         self.client = None
 
+
 def _translate_to_hny(spans):
     hny_data = []
     for span in spans:
@@ -112,6 +113,7 @@ def _translate_to_hny(spans):
         hny_data.append(d)
     return hny_data
 
+
 def _extract_refs_from_span(span):
     refs = []
 
@@ -133,6 +135,7 @@ def _extract_refs_from_span(span):
         refs.append(ref)
     return refs
 
+
 def _extract_logs_from_span(span):
     logs = []
 
@@ -140,7 +143,7 @@ def _extract_logs_from_span(span):
     trace_id = ctx.trace_id
     p_span_id = ctx.span_id
     for event in span.events:
-        l = {
+        ev = {
             'start_time': datetime.datetime.utcfromtimestamp(event.timestamp / float(1e9)),
             'duration_ms': 0,
             'name': event.name,
@@ -148,6 +151,6 @@ def _extract_logs_from_span(span):
             'trace.parent_id': trace_api.format_span_id(p_span_id)[2:],
             'meta.annotation_type': 'span_event',
         }
-        l.update(event.attributes)
-        logs.append(l)
+        ev.update(event.attributes)
+        logs.append(ev)
     return logs
