@@ -27,7 +27,7 @@ from requests import Session
 
 import opentelemetry.trace as trace_api
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
-from opentelemetry.trace.status import StatusCanonicalCode
+from opentelemetry.trace.status import StatusCode
 
 VERSION = '0.6b0'
 USER_AGENT_ADDITION = 'opentelemetry-exporter-python/%s' % VERSION
@@ -84,7 +84,7 @@ class HoneycombSpanExporter(SpanExporter):
 def _translate_to_hny(spans):
     hny_data = []
     for span in spans:
-        ctx = span.get_context()
+        ctx = span.get_span_context()
         trace_id = ctx.trace_id
         span_id = ctx.span_id
         duration_ns = span.end_time - span.start_time
@@ -94,19 +94,19 @@ def _translate_to_hny(spans):
             'name': span.name,
             'start_time': datetime.datetime.utcfromtimestamp(span.start_time / float(1e9)),
             'duration_ms': duration_ns / float(1e6),  # nanoseconds to ms
-            'response.status_code': span.status.canonical_code.value,
+            'response.status_code': span.status.status_code.value,
             'status.message': span.status.description,
             'span.kind': span.kind.name,  # meta.span_type?
         }
         if isinstance(span.parent, trace_api.Span):
-            d['trace.parent_id'] = trace_api.format_span_id(span.parent.get_context().span_id)[2:]
+            d['trace.parent_id'] = trace_api.format_span_id(span.parent.get_span_context().span_id)[2:]
         elif isinstance(span.parent, trace_api.SpanContext):
             d['trace.parent_id'] = trace_api.format_span_id(span.parent.span_id)[2:]
         # TODO: use sampling_decision attributes for sample rate.
         d.update(span.attributes)
 
         # Ensure that if Status.Code is not OK, that we set the 'error' tag on the Jaeger span.
-        if span.status.canonical_code is not StatusCanonicalCode.OK:
+        if span.status.status_code is not StatusCode.OK:
             d['error'] = True
         hny_data.extend(_extract_refs_from_span(span))
         hny_data.extend(_extract_logs_from_span(span))
@@ -117,7 +117,7 @@ def _translate_to_hny(spans):
 def _extract_refs_from_span(span):
     refs = []
 
-    ctx = span.get_context()
+    ctx = span.get_span_context()
     trace_id = ctx.trace_id
     p_span_id = ctx.span_id
     for link in span.links:
@@ -139,7 +139,7 @@ def _extract_refs_from_span(span):
 def _extract_logs_from_span(span):
     logs = []
 
-    ctx = span.get_context()
+    ctx = span.get_span_context()
     trace_id = ctx.trace_id
     p_span_id = ctx.span_id
     for event in span.events:
