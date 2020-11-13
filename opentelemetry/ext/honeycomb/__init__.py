@@ -27,7 +27,11 @@ from requests import Session
 
 import opentelemetry.trace as trace_api
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
-from opentelemetry.trace.status import StatusCanonicalCode
+
+try:
+    from opentelemetry.trace.status import StatusCode
+except ImportError:
+    from opentelemetry.trace.status import StatusCanonicalCode as StatusCode
 
 VERSION = '0.6b0'
 USER_AGENT_ADDITION = 'opentelemetry-exporter-python/%s' % VERSION
@@ -106,7 +110,7 @@ def _translate_to_hny(spans):
         d.update(span.attributes)
 
         # Ensure that if Status.Code is not OK, that we set the 'error' tag on the Jaeger span.
-        if span.status.canonical_code is not StatusCanonicalCode.OK:
+        if span.status.canonical_code is not StatusCode.OK:
             d['error'] = True
         hny_data.extend(_extract_refs_from_span(span))
         hny_data.extend(_extract_logs_from_span(span))
