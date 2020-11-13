@@ -10,14 +10,25 @@ pip install opentelemetry-ext-honeycomb
 ### Initialize
 
 ```python
-# note writekey and dataset may be specified in the environment instead
+from opentelemetry import trace
+from opentelemetry.ext.honeycomb import HoneycombSpanExporter
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchExportSpanProcessor
+
+trace.set_tracer_provider(TracerProvider())
 exporter = HoneycombSpanExporter(
-	service_name="test-service",
-	writekey=<HONEYCOMB_WRITEKEY>,
-	dataset=<HONEYCOMB_DATASET>,
+    service_name="test-service",
+    writekey=<HONEYCOMB_API_KEY>,
+    dataset=<HONEYCOMB_DATASET>,
 )
-span_processor = BatchExportSpanProcessor(exporter)
-tracer.add_span_processor(span_processor)
+
+trace.get_tracer_provider().add_span_processor(BatchExportSpanProcessor(exporter))
+
+tracer = trace.get_tracer(__name__)
+with tracer.start_as_current_span('span_one'):
+    with tracer.start_as_current_span('span_two'):
+        with tracer.start_as_current_span('span_three'):
+            print("Hello, from a child span")
 ```
 
 ### Development
