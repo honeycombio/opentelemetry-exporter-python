@@ -29,7 +29,7 @@ import opentelemetry.trace as trace_api
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.trace.status import StatusCode
 
-VERSION = '0.15b0'
+VERSION = '0.15b1'
 USER_AGENT_ADDITION = 'opentelemetry-exporter-python/%s' % VERSION
 
 
