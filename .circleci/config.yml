@@ -167,26 +167,18 @@ workflows:
           filters:
             tags:
               only: /.*/
-          requires:
-            - setup_trace
       - test_python3-6:
           filters:
             tags:
               only: /.*/
-          requires:
-            - setup_trace
       - test_python3-7:
           filters:
             tags:
               only: /.*/
-          requires:
-            - setup_trace
       - test_python3-8:
           filters:
             tags:
               only: /.*/
-          requires:
-            - setup_trace
       - build:
           filters:
             tags:
