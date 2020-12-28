@@ -157,22 +157,12 @@ workflows:
   nightly:
     triggers:
       - schedule:
-          cron: "7 18 * * *"
+          cron: "51 19 * * *"
           filters:
             branches:
               only:
                 - vera.test-cci
     jobs:
-      - setup_trace:
-          filters:
-            tags:
-              only: /.*/
-      - watch:
-          filters:
-            tags:
-              only: /.*/
-          requires:
-            - setup_trace
       - test_python3-5:
           filters:
             tags:
