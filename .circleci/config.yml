@@ -214,11 +214,15 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
       - watch:
           context: Honeycomb Secrets for Public Repos
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - setup_trace
       - test_python3-5:
@@ -226,6 +230,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - setup_trace
       - test_python3-6:
@@ -233,6 +239,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - setup_trace
       - test_python3-7:
@@ -240,6 +248,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - setup_trace
       - test_python3-8:
@@ -247,6 +257,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - setup_trace
       - build:
@@ -254,6 +266,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - test_python3-5
             - test_python3-6
@@ -277,3 +291,31 @@ workflows:
               only: /v[0-9].*/
             branches:
               ignore: /.*/
+
+  build_opentelemetry_forked:
+    jobs:
+      - test_python3-5:
+          filters:
+            branches:
+              only: /pull\/.*/
+      - test_python3-6:
+          filters:
+            branches:
+              only: /pull\/.*/
+      - test_python3-7:
+          filters:
+            branches:
+              only: /pull\/.*/
+      - test_python3-8:
+          filters:
+            branches:
+              only: /pull\/.*/
+      - build:
+          filters:
+            branches:
+              only: /pull\/.*/
+          requires:
+            - test_python3-5
+            - test_python3-6
+            - test_python3-7
+            - test_python3-8
