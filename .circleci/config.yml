@@ -94,12 +94,6 @@ commands:
           bename: poetry_publish
           becommand: poetry publish --build -u honeycomb -p ${PYPI_PASSWORD}
 
-# required as all of the jobs need to have a tag filter for some reason
-tag_filters: &tag_filters
-  filters:
-    tags:
-      only: /.*/
-
 jobs:
   setup_trace:
     executor: python3-8
@@ -157,32 +151,45 @@ workflows:
   nightly:
     triggers:
       - schedule:
-          cron: "51 19 * * *"
+          cron: "7 20 * * *"
           filters:
             branches:
               only:
                 - vera.test-cci
     jobs:
+      - test_python3-5
+      - test_python3-6
+      - test_python3-7
+      - test_python3-8
+      - build:
+          requires:
+            - test_python3-5
+            - test_python3-6
+            - test_python3-7
+            - test_python3-8
+
+  build_opentelemetry_forked:
+    jobs:
       - test_python3-5:
           filters:
-            tags:
-              only: /.*/
+            branches:
+              only: /pull\/.*/
       - test_python3-6:
           filters:
-            tags:
-              only: /.*/
+            branches:
+              only: /pull\/.*/
       - test_python3-7:
           filters:
-            tags:
-              only: /.*/
+            branches:
+              only: /pull\/.*/
       - test_python3-8:
           filters:
-            tags:
-              only: /.*/
+            branches:
+              only: /pull\/.*/
       - build:
           filters:
-            tags:
-              only: /.*/
+            branches:
+              only: /pull\/.*/
           requires:
             - test_python3-5
             - test_python3-6
@@ -273,31 +280,3 @@ workflows:
               only: /v[0-9].*/
             branches:
               ignore: /.*/
-
-  build_opentelemetry_forked:
-    jobs:
-      - test_python3-5:
-          filters:
-            branches:
-              only: /pull\/.*/
-      - test_python3-6:
-          filters:
-            branches:
-              only: /pull\/.*/
-      - test_python3-7:
-          filters:
-            branches:
-              only: /pull\/.*/
-      - test_python3-8:
-          filters:
-            branches:
-              only: /pull\/.*/
-      - build:
-          filters:
-            branches:
-              only: /pull\/.*/
-          requires:
-            - test_python3-5
-            - test_python3-6
-            - test_python3-7
-            - test_python3-8
