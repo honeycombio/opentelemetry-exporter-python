@@ -151,11 +151,11 @@ workflows:
   nightly:
     triggers:
       - schedule:
-          cron: "7 20 * * *"
+          cron: "0 0 * * *"
           filters:
             branches:
               only:
-                - vera.test-cci
+                - main
     jobs:
       - test_python3-5
       - test_python3-6
