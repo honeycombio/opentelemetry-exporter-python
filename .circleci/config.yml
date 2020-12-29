@@ -94,12 +94,6 @@ commands:
           bename: poetry_publish
           becommand: poetry publish --build -u honeycomb -p ${PYPI_PASSWORD}
 
-# required as all of the jobs need to have a tag filter for some reason
-tag_filters: &tag_filters
-  filters:
-    tags:
-      only: /.*/
-
 jobs:
   setup_trace:
     executor: python3-8
@@ -163,51 +157,39 @@ workflows:
               only:
                 - main
     jobs:
-      - setup_trace:
-          context: Honeycomb Secrets for Public Repos
-          filters:
-            tags:
-              only: /.*/
-      - watch:
-          context: Honeycomb Secrets for Public Repos
-          filters:
-            tags:
-              only: /.*/
-          requires:
-            - setup_trace
-      - test_python3-5:
-          context: Honeycomb Secrets for Public Repos
-          filters:
-            tags:
-              only: /.*/
-          requires:
-            - setup_trace
-      - test_python3-6:
-          context: Honeycomb Secrets for Public Repos
-          filters:
-            tags:
-              only: /.*/
-          requires:
-            - setup_trace
-      - test_python3-7:
-          context: Honeycomb Secrets for Public Repos
-          filters:
-            tags:
-              only: /.*/
-          requires:
-            - setup_trace
-      - test_python3-8:
-          context: Honeycomb Secrets for Public Repos
-          filters:
-            tags:
-              only: /.*/
-          requires:
-            - setup_trace
+      - test_python3-5
+      - test_python3-6
+      - test_python3-7
+      - test_python3-8
       - build:
-          context: Honeycomb Secrets for Public Repos
+          requires:
+            - test_python3-5
+            - test_python3-6
+            - test_python3-7
+            - test_python3-8
+
+  build_opentelemetry_forked:
+    jobs:
+      - test_python3-5:
           filters:
-            tags:
-              only: /.*/
+            branches:
+              only: /pull\/.*/
+      - test_python3-6:
+          filters:
+            branches:
+              only: /pull\/.*/
+      - test_python3-7:
+          filters:
+            branches:
+              only: /pull\/.*/
+      - test_python3-8:
+          filters:
+            branches:
+              only: /pull\/.*/
+      - build:
+          filters:
+            branches:
+              only: /pull\/.*/
           requires:
             - test_python3-5
             - test_python3-6
@@ -221,11 +203,15 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
       - watch:
           context: Honeycomb Secrets for Public Repos
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - setup_trace
       - test_python3-5:
@@ -233,6 +219,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - setup_trace
       - test_python3-6:
@@ -240,6 +228,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - setup_trace
       - test_python3-7:
@@ -247,6 +237,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - setup_trace
       - test_python3-8:
@@ -254,6 +246,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - setup_trace
       - build:
@@ -261,6 +255,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: /pull\/.*/
           requires:
             - test_python3-5
             - test_python3-6
