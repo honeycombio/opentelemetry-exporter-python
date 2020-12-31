@@ -151,11 +151,11 @@ workflows:
   nightly:
     triggers:
       - schedule:
-          cron: "5 18 * * *"
+          cron: "0 0 * * *"
           filters:
             branches:
               only:
-                - vera.fix-build
+                - main
     jobs:
       - setup_trace
       - test_python3-5:
