@@ -151,11 +151,11 @@ workflows:
   nightly:
     triggers:
       - schedule:
-          cron: "0 0 * * *"
+          cron: "50 17 * * *"
           filters:
             branches:
               only:
-                - main
+                - /pull\/.*/
     jobs:
       - test_python3-5
       - test_python3-6
