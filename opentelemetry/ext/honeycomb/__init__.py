@@ -17,10 +17,12 @@
 Honeycomb from within your Python application.
 '''
 
-import libhoney
 import datetime
+import json
+import libhoney
 import os
 import socket
+import sys
 import types
 
 from requests import Session
@@ -81,6 +83,28 @@ class HoneycombSpanExporter(SpanExporter):
         self.client = None
 
 
+class HoneycombConsoleSpanExporter(SpanExporter):
+    """Honeycomb console span exporter for the Honeycomb AWS Lambda Instrumentation.
+    """
+
+    def __init__(
+        self,
+        service_name=None,
+        out=sys.stdout,
+        formatter=lambda d: json.dumps(d) + os.linesep,
+    ):
+        self.out = out
+        self.formatter = formatter
+        self.service_name = service_name
+
+    def export(self, spans):
+        for d in _translate_to_hny(spans):
+            del d["start_time"]  # trust API log timestamp?
+            self.out.write(self.formatter(d))
+        self.out.flush()
+        return SpanExportResult.SUCCESS
+
+
 def _translate_to_hny(spans):
     hny_data = []
     for span in spans:
@@ -103,6 +127,7 @@ def _translate_to_hny(spans):
         elif isinstance(span.parent, trace_api.SpanContext):
             d['trace.parent_id'] = trace_api.format_span_id(span.parent.span_id)[2:]
         # TODO: use sampling_decision attributes for sample rate.
+        d.update(span.resource.attributes)
         d.update(span.attributes)
 
         # Ensure that if Status.Code is not OK, that we set the 'error' tag on the Jaeger span.
