@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  buildevents: honeycombio/buildevents@0.2.6
+  buildevents: honeycombio/buildevents@0.2.7
 
 executors:
   python3-5:
@@ -157,39 +157,20 @@ workflows:
               only:
                 - main
     jobs:
-      - test_python3-5
-      - test_python3-6
-      - test_python3-7
-      - test_python3-8
-      - build:
-          requires:
-            - test_python3-5
-            - test_python3-6
-            - test_python3-7
-            - test_python3-8
-
-  build_opentelemetry_forked:
-    jobs:
+      - setup_trace
       - test_python3-5:
-          filters:
-            branches:
-              only: /pull\/.*/
+          requires:
+            - setup_trace
       - test_python3-6:
-          filters:
-            branches:
-              only: /pull\/.*/
+          requires:
+            - setup_trace
       - test_python3-7:
-          filters:
-            branches:
-              only: /pull\/.*/
+          requires:
+            - setup_trace
       - test_python3-8:
-          filters:
-            branches:
-              only: /pull\/.*/
+          requires:
+            - setup_trace
       - build:
-          filters:
-            branches:
-              only: /pull\/.*/
           requires:
             - test_python3-5
             - test_python3-6
@@ -199,12 +180,9 @@ workflows:
   build_opentelemetry:
     jobs:
       - setup_trace:
-          context: Honeycomb Secrets for Public Repos
           filters:
             tags:
               only: /.*/
-            branches:
-              ignore: /pull\/.*/
       - watch:
           context: Honeycomb Secrets for Public Repos
           filters:
@@ -215,48 +193,33 @@ workflows:
           requires:
             - setup_trace
       - test_python3-5:
-          context: Honeycomb Secrets for Public Repos
           filters:
             tags:
               only: /.*/
-            branches:
-              ignore: /pull\/.*/
           requires:
             - setup_trace
       - test_python3-6:
-          context: Honeycomb Secrets for Public Repos
           filters:
             tags:
               only: /.*/
-            branches:
-              ignore: /pull\/.*/
           requires:
             - setup_trace
       - test_python3-7:
-          context: Honeycomb Secrets for Public Repos
           filters:
             tags:
               only: /.*/
-            branches:
-              ignore: /pull\/.*/
           requires:
             - setup_trace
       - test_python3-8:
-          context: Honeycomb Secrets for Public Repos
           filters:
             tags:
               only: /.*/
-            branches:
-              ignore: /pull\/.*/
           requires:
             - setup_trace
       - build:
-          context: Honeycomb Secrets for Public Repos
           filters:
             tags:
               only: /.*/
-            branches:
-              ignore: /pull\/.*/
           requires:
             - test_python3-5
             - test_python3-6
