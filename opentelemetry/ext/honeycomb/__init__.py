@@ -52,11 +52,15 @@ class HoneycombSpanExporter(SpanExporter):
         transmission_impl = libhoney.transmission.Transmission(
             user_agent_addition=USER_AGENT_ADDITION,
         )
-        request = Session.request
-        if getattr(Session.request, "opentelemetry_ext_requests_applied", False):
-            request = Session.request.__wrapped__  # pylint:disable=no-member
-        # Bind session.request for this object to the non-instrumented version.
-        transmission_impl.session.request = types.MethodType(request, transmission_impl.session)
+
+        # Check for opentel instrumentation and unwrap Session request and send
+        for func in ['request', 'send']:
+            session_func = getattr(Session, func,  None)
+            if getattr(session_func, "opentelemetry_instrumentation_requests_applied", False):
+                session_func = session_func.__wrapped__  # pylint:disable=no-member
+
+            # Bind session function for this object to the non-instrumented version.
+            setattr(transmission_impl.session, func, types.MethodType(session_func, transmission_impl.session))
 
         self.client = libhoney.Client(
             writekey=writekey,
