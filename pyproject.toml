@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "opentelemetry-ext-honeycomb"
-version = "0.15b2"
+version = "0.16b0"
 description = "OpenTelemetry plugins for Honeycomb"
 authors = ["Honeycomb Authors <solutions@honeycomb.io>"]
 license = "Apache-2.0"
