@@ -75,9 +75,10 @@ class HoneycombSpanExporter(SpanExporter):
     def export(self, spans):
         hny_data = _translate_to_hny(spans)
         for d in hny_data:
-            e = libhoney.Event(data=d, client=self.client)
-            e.created_at = d['start_time']
+            start_time = d['start_time']
             del d['start_time']
+            e = libhoney.Event(data=d, client=self.client)
+            e.created_at = start_time
             e.send()
         return SpanExportResult.SUCCESS
 
