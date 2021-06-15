@@ -39,7 +39,7 @@ class HoneycombSpanExporter(SpanExporter):
     """Honeycomb span exporter for Opentelemetry.
     """
     def __init__(self, writekey='', dataset='', service_name='',
-                 api_host='https://api.honeycomb.io'):
+                 api_host='https://api.honeycomb.io', debug=False):
         if not writekey:
             writekey = os.environ.get('HONEYCOMB_WRITEKEY', '')
 
@@ -51,6 +51,7 @@ class HoneycombSpanExporter(SpanExporter):
 
         transmission_impl = libhoney.transmission.Transmission(
             user_agent_addition=USER_AGENT_ADDITION,
+            debug=debug,
         )
 
         # Check for opentel instrumentation and unwrap Session request and send
@@ -67,6 +68,7 @@ class HoneycombSpanExporter(SpanExporter):
             dataset=dataset,
             api_host=api_host,
             transmission_impl=transmission_impl,
+            debug=debug,
         )
         self.client.add_field('service_name', service_name)
         self.client.add_field('meta.otel_exporter_version', VERSION)
