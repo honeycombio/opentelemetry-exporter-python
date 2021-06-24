@@ -17,7 +17,7 @@ pip install opentelemetry-ext-honeycomb
 from opentelemetry import trace
 from opentelemetry.ext.honeycomb import HoneycombSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchExportSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 trace.set_tracer_provider(TracerProvider())
 exporter = HoneycombSpanExporter(
@@ -26,7 +26,7 @@ exporter = HoneycombSpanExporter(
     dataset=<HONEYCOMB_DATASET>,
 )
 
-trace.get_tracer_provider().add_span_processor(BatchExportSpanProcessor(exporter))
+trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(exporter))
 
 tracer = trace.get_tracer(__name__)
 with tracer.start_as_current_span('span_one'):

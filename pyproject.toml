@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "opentelemetry-ext-honeycomb"
-version = "0.16b0"
+version = "1.3.0"
 description = "OpenTelemetry plugins for Honeycomb"
 authors = ["Honeycomb Authors <solutions@honeycomb.io>"]
 license = "Apache-2.0"
@@ -20,9 +20,9 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.5"
-opentelemetry-api = ">=0.15b0"
-opentelemetry-sdk = ">=0.15b0"
+python = ">=3.6"
+opentelemetry-api = "1.3.0"
+opentelemetry-sdk = "1.3.0"
 libhoney = ">=1.10.0"
 [tool.poetry.dev-dependencies]
 pylint = "^2.6.0"
