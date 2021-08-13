@@ -1,9 +1,9 @@
 # opentelemetry-exporter-python
 The honeycomb.io Python exporter for OpenTelemetry
 
-**NOTE:** Did you know that Honeycomb now supports OTLP ingest directly? This means you
- can use [an OTLP exporter](https://docs.honeycomb.io/getting-data-in/python/opentelemetry-tutorial/)
- and no longer need this exporter to send data to Honeycomb.
+[![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/opentelemetry-exporter-python)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
+
+**STATUS: this project is being sunset.** See https://github.com/honeycombio/opentelemetry-exporter-python/issues/36
 
 ### Install
 
